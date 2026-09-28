@@ -1,0 +1,24 @@
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+entity ssram_8k is
+  generic ( baseAddress : std_logic_vector( 31 downto 0 ) := X"50000000" );
+  port ( clock              : in  std_logic;
+         reset              : in  std_logic;
+         
+         -- here the bus interface is defined
+         beginTransactionIn : in  std_logic;
+         endTransactionIn   : in  std_logic;
+         readNotWriteIn     : in  std_logic;
+         dataValidIn        : in  std_logic;
+         busyIn             : in  std_logic;
+         busErrorIn         : in  std_logic;
+         addressDataIn      : in  std_logic_vector( 31 downto 0 );
+         byteEnablesIn      : in  std_logic_vector(  3 downto 0 );
+         burstSizeIn        : in  std_logic_vector(  7 downto 0 );
+         endTransactionOut  : out std_logic;
+         dataValidOut       : out std_logic;
+         addressDataOut     : out std_logic_vector( 31 downto 0 ));
+end ssram_8k;
+
