@@ -1,25 +1,43 @@
 #include "fractal_fxpt.h"
 #include <swap.h>
+#include <stdio.h>
+
 
 //! \brief  Mandelbrot fractal point calculation function
 //! \param  cx    x-coordinate
 //! \param  cy    y-coordinate
 //! \param  n_max maximum number of iterations
 //! \return       number of performed iterations at coordinate (cx, cy)
-uint16_t calc_mandelbrot_point_soft(fxpt_6_26 cx, fxpt_6_26 cy, uint16_t n_max) {
-  fxpt_6_26 x = cx;
-  fxpt_6_26 y = cy;
+uint16_t calc_mandelbrot_point_soft(fxpt_4_28 cx, fxpt_4_28 cy, uint16_t n_max) {
+  fxpt_4_28 x = cx;
+  fxpt_4_28 y = cy;
   uint16_t n = 0;
-  fxpt_6_26 xx, yy, two_xy;
-  do {
-    xx = fxpt_mul(x, x);
-    yy = fxpt_mul(y, y);
-    two_xy = fxpt_mul2(x, y);
-
-    x = xx - yy + cx;
-    y = two_xy + cy;
+  fxpt_4_28 xx, yy, two_xy;
+  
+  while (n < n_max) {
+    // Before the break
     ++n;
-  } while (((xx + yy) < (4 << NBR_DECIMAL_BITS)) && (n < n_max));
+
+    // Products kept in int64_t
+    int64_t xx = ((int64_t)x * x) >> NBR_DECIMAL_BITS;
+    int64_t yy = ((int64_t)y * y) >> NBR_DECIMAL_BITS;
+
+    // Escape test before converting back to fxpt_4_28
+    if (xx + yy >= ((int64_t)4 << NBR_DECIMAL_BITS))
+        break;
+
+    // Products (times 2) kept in int64_t
+    int64_t two_xy = ((int64_t)x * y) >> (NBR_DECIMAL_BITS - 1);
+
+    int64_t new_x = xx - yy + cx;
+    int64_t new_y = two_xy + cy;
+
+    // Handle any lasting overflows (not necessary for the escape test, but prevents undefined behavior)
+    if (new_x > INT32_MAX || new_x < INT32_MIN || new_y > INT32_MAX || new_y < INT32_MIN) break;
+
+    x = (fxpt_4_28)new_x;
+    y = (fxpt_4_28)new_y;
+  }
   return n;
 }
 
@@ -100,11 +118,11 @@ rgb565 iter_to_colour1(uint16_t iter, uint16_t n_max) {
 //! \param  n_max  maximum number of iterations
 void draw_fractal(rgb565 *fbuf, int width, int height,
                   calc_frac_point_p cfp_p, iter_to_colour_p i2c_p,
-                  fxpt_6_26 cx_0, fxpt_6_26 cy_0, fxpt_6_26 delta, uint16_t n_max) {
+                  fxpt_4_28 cx_0, fxpt_4_28 cy_0, fxpt_4_28 delta, uint16_t n_max) {
   rgb565 *pixel = fbuf;
-  fxpt_6_26 cy = cy_0;
+  fxpt_4_28 cy = cy_0;
   for (int k = 0; k < height; ++k) {
-    fxpt_6_26 cx = cx_0;
+    fxpt_4_28 cx = cx_0;
     for(int i = 0; i < width; ++i) {
       uint16_t n_iter = (*cfp_p)(cx, cy, n_max);
       rgb565 colour = (*i2c_p)(n_iter, n_max);

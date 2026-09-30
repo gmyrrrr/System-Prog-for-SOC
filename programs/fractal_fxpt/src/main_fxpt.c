@@ -10,18 +10,19 @@ const int SCREEN_WIDTH = 512;   //!< screen width
 const int SCREEN_HEIGHT = 512;  //!< screen height
 
 // Constants describing the initial view port on the fractal function
-const fxpt_6_26 FRAC_WIDTH = fxpt_6_26(3.0);    //!< default fractal width (3.0 in Q4.28)
-const fxpt_6_26 CX_0       = fxpt_6_26(-2.0);   //!< default start x-coordinate (-2.0 in Q4.28)
-const fxpt_6_26 CY_0       = fxpt_6_26(-1.5);   //!< default start y-coordinate (-1.5 in Q4.28)
+const fxpt_4_28 FRAC_WIDTH = fxpt_4_28(3.0);    //!< default fractal width (3.0 in Q4.28)
+const fxpt_4_28 CX_0       = fxpt_4_28(-2.0);   //!< default start x-coordinate (-2.0 in Q4.28)
+const fxpt_4_28 CY_0       = fxpt_4_28(-1.5);   //!< default start y-coordinate (-1.5 in Q4.28)
 const uint16_t N_MAX = 64;                       //!< maximum number of iterations
 
 int main() {
    volatile unsigned int *vga = (unsigned int *) 0x50000020;
    volatile unsigned int reg, hi;
    rgb565 frameBuffer[SCREEN_WIDTH*SCREEN_HEIGHT];
-   fxpt_6_26 delta = FRAC_WIDTH / SCREEN_WIDTH;
+   fxpt_4_28 delta = FRAC_WIDTH / SCREEN_WIDTH;
    int i;
    vga_clear();
+
    printf("Starting drawing a fractal\n");
 #ifdef __OR1300__   
    /* enable the caches */
@@ -38,7 +39,7 @@ int main() {
    /* Clear screen */
    for (i = 0 ; i < SCREEN_WIDTH*SCREEN_HEIGHT ; i++) frameBuffer[i]=0;
 
-   dcache_flush();
+   asm volatile ("" ::: "memory"); // Prevent memory accesses from being reordered across this point
    draw_fractal(frameBuffer,SCREEN_WIDTH,SCREEN_HEIGHT,&calc_mandelbrot_point_soft, &iter_to_colour,CX_0,CY_0,delta,N_MAX);
 #ifdef __OR1300__
    dcache_flush();

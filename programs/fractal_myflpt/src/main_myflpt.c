@@ -10,16 +10,21 @@ const int SCREEN_WIDTH = 512;   //!< screen width
 const int SCREEN_HEIGHT = 512;  //!< screen height
 
 // Constants describing the initial view port on the fractal function
-const float FRAC_WIDTH = 3.0; //!< default fractal width (3.0 in Q4.28)
-const float CX_0 = -2.0;      //!< default start x-coordinate (-2.0 in Q4.28)
-const float CY_0 = -1.5;      //!< default start y-coordinate (-1.5 in Q4.28)
+const float FRAC_WDTH =  3.0;   //!< default fractal width (3.0 in Q4.28)
+
+// Constants describing the initial view port on the fractal function
 const uint16_t N_MAX = 64;    //!< maximum number of iterations
 
 int main() {
+   // Constants describing the initial view port on the fractal function
+   const flpt_1_27_4 CX_0                 =  float_to_flpt(-2.0);      //!< default start x-coordinate (-2.0 in Q4.28)
+   const flpt_1_27_4 CY_0                 =  float_to_flpt(-1.5);      //!< default start y-coordinate (-1.5 in Q4.28)
+
    volatile unsigned int *vga = (unsigned int *) 0x50000020;
    volatile unsigned int reg, hi;
    rgb565 frameBuffer[SCREEN_WIDTH*SCREEN_HEIGHT];
-   float delta = FRAC_WIDTH / SCREEN_WIDTH;
+   flpt_1_27_4 delta = float_to_flpt(FRAC_WDTH / SCREEN_WIDTH);
+
    int i;
    vga_clear();
    printf("Starting drawing a fractal\n");
@@ -35,12 +40,27 @@ int main() {
    vga[1] = swap_u32(SCREEN_HEIGHT);
    vga[2] = swap_u32(1);
    vga[3] = swap_u32((unsigned int)&frameBuffer[0]);
-   /* Clear screen */
-   for (i = 0 ; i < SCREEN_WIDTH*SCREEN_HEIGHT ; i++) frameBuffer[i]=0;
 
-   draw_fractal(frameBuffer,SCREEN_WIDTH,SCREEN_HEIGHT,&calc_mandelbrot_point_soft, &iter_to_colour,CX_0,CY_0,delta,N_MAX);
-#ifdef __OR1300__
+   /* Clear framebuffer */
+   for (i = 0; i < SCREEN_WIDTH * SCREEN_HEIGHT; i++)
+      frameBuffer[i] = 0;
+
+   #ifdef __OR1300__
    dcache_flush();
-#endif
+   #endif
+
+   asm volatile ("" ::: "memory");
+
+   draw_fractal(frameBuffer, SCREEN_WIDTH, SCREEN_HEIGHT,
+               &calc_mandelbrot_point_soft,
+               &iter_to_colour,
+               CX_0, CY_0, delta, N_MAX);
+
+   asm volatile ("" ::: "memory");
+
+   #ifdef __OR1300__
+   dcache_flush();
+   #endif
+
    printf("Done\n");
 }
