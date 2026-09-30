@@ -17,8 +17,8 @@ const uint16_t N_MAX = 64;    //!< maximum number of iterations
 
 int main() {
    // Constants describing the initial view port on the fractal function
-   const flpt_1_27_4 CX_0                 =  float_to_flpt(-2.0);      //!< default start x-coordinate (-2.0 in Q4.28)
-   const flpt_1_27_4 CY_0                 =  float_to_flpt(-1.5);      //!< default start y-coordinate (-1.5 in Q4.28)
+   const flpt_1_27_4 CX_0 = float_to_flpt(-2.0);      //!< default start x-coordinate (-2.0 in Q4.28)
+   const flpt_1_27_4 CY_0 = float_to_flpt(-1.5);      //!< default start y-coordinate (-1.5 in Q4.28)
 
    volatile unsigned int *vga = (unsigned int *) 0x50000020;
    volatile unsigned int reg, hi;
