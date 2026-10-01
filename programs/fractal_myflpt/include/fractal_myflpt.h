@@ -26,7 +26,6 @@ flpt_1_27_4 float_to_flpt(float x);
 flpt_1_27_4 flpt_add(flpt_1_27_4 a, flpt_1_27_4 b);
 flpt_1_27_4 flpt_sub(flpt_1_27_4 a, flpt_1_27_4 b);
 flpt_1_27_4 flpt_mul(flpt_1_27_4 a, flpt_1_27_4 b);
-flpt_1_27_4 flpt_div(flpt_1_27_4 a, flpt_1_27_4 b);
 bool flpt_is_greater_or_equal(flpt_1_27_4 a, flpt_1_27_4 b);
 
 //----------------------------------//

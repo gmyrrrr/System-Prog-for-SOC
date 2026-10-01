@@ -160,53 +160,6 @@ flpt_1_27_4 flpt_mul(flpt_1_27_4 a, flpt_1_27_4 b){
   return (result_sign << SIGN_SHIFT) | ((uint32_t)stored_mantissa << MANTISSA_SHIFT) | (result_exponent & EXPONENT_MASK);
 }
 
-flpt_1_27_4 flpt_div(flpt_1_27_4 a, flpt_1_27_4 b){
-  // Special cases
-  if (a == 0) {
-    return 0;
-  }
-
-  if (b == 0) {
-    signed int sign_a = (a & SIGN_MASK) >> SIGN_SHIFT;
-    return (sign_a << SIGN_SHIFT) | MANTISSA_MASK | EXPONENT_MASK;
-  }
-
-  signed int sign_a = (a & SIGN_MASK) >> SIGN_SHIFT;
-  signed int sign_b = (b & SIGN_MASK) >> SIGN_SHIFT;
-  signed int exponent_a = (a & EXPONENT_MASK) >> EXPONENT_SHIFT;
-  signed int exponent_b = (b & EXPONENT_MASK) >> EXPONENT_SHIFT;
-
-  // With implicit leading 1 => (-1)^s * 1.m * 2^(E-8)
-  signed int mantissa_a = ((a & MANTISSA_MASK) >> MANTISSA_SHIFT) | (1U << NBR_MANTISSA_BITS);
-  signed int mantissa_b = ((b & MANTISSA_MASK) >> MANTISSA_SHIFT) | (1U << NBR_MANTISSA_BITS);
-
-  signed int result_sign = sign_a ^ sign_b;
-  signed int result_exponent = exponent_a - exponent_b + EXPONENT_BIAS;
-  signed long long result_mantissa = ((long long)mantissa_a << NBR_MANTISSA_BITS) / mantissa_b;
-
-  // Normalize the result
-  if (result_mantissa < (1LL << NBR_MANTISSA_BITS)) {
-    result_mantissa <<= 1;
-    result_exponent--;
-  }
-
-  // Exponent underflow
-  if (result_exponent < 0) {
-    return 0;
-  }
-
-  // Exponent overflow
-  if (result_exponent > 15) {
-    // Handle overflow (return max value)
-    return (result_sign << SIGN_SHIFT) | ((1U << NBR_MANTISSA_BITS) - 1U) << MANTISSA_SHIFT | (EXPONENT_MASK);
-  }
-
-  // Remove implicit leading 1 
-  uint32_t stored_mantissa = (result_mantissa & ((1U << NBR_MANTISSA_BITS) - 1U));
-
-  return (result_sign << SIGN_SHIFT) | ((uint32_t)stored_mantissa << MANTISSA_SHIFT) | (result_exponent & EXPONENT_MASK);
-}
-
 bool flpt_is_greater_or_equal(flpt_1_27_4 a, flpt_1_27_4 b) {
 
   // Equal values
