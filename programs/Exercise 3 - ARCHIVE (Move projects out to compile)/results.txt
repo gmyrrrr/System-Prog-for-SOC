@@ -1,0 +1,163 @@
+--------------------- 2.2 - Instruction Cache Performance ---------------------
+
+Results:
+- Instruction cache fetches: 721,686,768
+- Instruction cache misses: 39
+
+Observation:
+The number of instruction cache fetches is extremely high, while only 39 cache 
+misses occur.
+
+This indicates that the instruction cache is very efficient. Since the fractal 
+program repeatedly executes the same instructions, they remain in the cache, 
+avoiding repeated accesses to the slower main memory.
+
+--------------------- 2.3 - Memory Distance ---------------------
+
+Results:
+Memory distance = 0
+- Stall cycles:         15,721,114 (0.264 s)
+- Bus idle cycles:      530,394,513 (8.929 s)
+- Runtime cycles:       737,407,876 (12.414 s)
+- I-cache fetches:      721,686,762
+- I-cache misses:       41
+
+Memory distance = 5
+- Stall cycles:         24,471,446 (0.411 s)
+- Bus idle cycles:      439,073,969 (7.391 s)
+- Runtime cycles:       746,158,209 (12.561 s)
+- I-cache fetches:      721,686,763
+- I-cache misses:       36
+
+Memory distance = 25
+- Stall cycles:         58,422,549 (0.983 s)
+- Bus idle cycles:      303,341,220 (5.106 s)
+- Runtime cycles:       780,109,312 (13.133 s)
+- I-cache fetches:      721,686,763
+- I-cache misses:       36
+
+Memory distance = 63
+- Stall cycles:         217,403,813 (3.659 s)
+- Bus idle cycles:      270,675,992 (4.556 s)
+- Runtime cycles:       939,090,576 (15.809 s)
+- I-cache fetches:      721,686,763
+- I-cache misses:       36
+
+
+Observation:
+As the memory distance increases from 0 to 63, the execution time increases 
+from 12.414 s to 15.809 s.
+
+The stall time also increases significantly, from 0.264 s to 3.659 s, while the 
+bus idle time decreases.
+
+Meanwhile, the number of instruction cache fetches and misses remains almost 
+constant.
+
+The increase in runtime (3.395 s) corresponds almost exactly to the increase 
+in stall time (3.395 s).
+
+Conclusion:
+Increasing the memory distance introduces additional CPU stall cycles, resulting 
+in longer execution times. The slowdown is not caused by additional instruction
+cache misses.
+
+--------------------- 2.4 - Exception Vectors ---------------------
+
+--------- 2.4.1 ---------
+The EPCR (Exception Program Counter Register) stores the return address when an 
+exception occurs, before the CPU redirects execution to the exception vector. 
+This allows the interrupted program to resume after the exception has been handled.
+
+--------- 2.4.2 ---------
+The exception vectors are defined in the .vectors section at the beginning of 
+crt0.s. They contain jump instructions redirecting exceptions to the common 
+_exception_handler.
+
+The _vectors table at the end of the file stores the addresses of the specific 
+exception handlers. The .global _vectors directive makes this symbol visible to the 
+linker, allowing other object files to reference the same table (see 2.4.4).
+
+--------- 2.4.3 ---------
+The _exception_handler saves the general-purpose registers onto the stack, identifies 
+the exception type, and uses it as an index into the _vectors table to call the 
+corresponding handler through l.jalr (Jump and Link Register).
+
+The l.jalr instruction saves the return address in r9 (link register). After the 
+specific handler finishes, the compiler-generated return instructions, typically 
+including l.jr r9, allow execution to resume in _exception_handler.
+
+The _exception_handler then restores the saved registers and executes l.rfe (Return 
+From Exception), which restores the PC and SR from the exception-related registers 
+EPCR and ESR, allowing the interrupted program to resume.
+
+--------- 2.4.4 ---------
+The extern keyword in exception.h declares _vectors as an array of function pointers 
+defined elsewhere, without creating a new array.
+
+The .global _vectors directive in crt0.s makes the symbol accessible to other object 
+files, while extern allows the C code to reference it. The linker resolves both 
+references to the same table in memory.
+
+The linker also resolves the handler names in crt0.s to their corresponding functions 
+in exception.c. If the table is writable, its function pointers can be modified at 
+runtime to assign different handlers, for example:
+
+_vectors[EXCEPTION_EXTERNAL_INTERRUPT] = my_handler;
+
+--------- 2.4.5 ---------
+The given code is :
+
+    int *addr = (int *)0x100;
+    int data;
+
+    asm volatile (
+        "l.lwz %[d], 0(%[s])"
+        : [d] "=r" (data)
+        : [s] "r" (addr)
+    );
+
+This can generate 4 exceptions : 
+ - Alignment Exception: Occurs when the address is not aligned to a 4-byte 
+ boundary (e.g., addr = (int *)0x101).
+
+ - Bus Error Exception: Occurs when the processor tries to access an invalid 
+ memory address and the bus reports an error (e.g., an aligned address outside 
+ the available memory).
+
+ - DTLB Miss Exception: Occurs when the Data Translation Lookaside Buffer 
+ (DTLB) does not contain the virtual-to-physical address translation, if the 
+ data MMU is enabled.
+
+ - Data Page Fault Exception: Occurs when the memory access violates page access 
+ permissions or the required memory mapping is invalid, if the data MMU is enabled.
+
+
+Purpose of volatile:
+The volatile keyword prevents the compiler from removing or optimizing away the 
+inline assembly instruction, even if its output is not used. This ensures that the 
+memory access is actually performed, allowing the exception to be triggered.
+
+
+--------------------- 2.5 - System Calls ---------------------
+
+--------- 2.5.3 ---------
+The EPC points to the instruction following the syscall. Since OpenRISC instructions 
+are 4 bytes long, the syscall instruction is located at EPC - 4.
+
+- First syscall: 0x200000AA -> l.sys 0xAA
+- Second syscall: 0x200000E0 -> l.sys 0xE0
+
+The EPC increases from 0x23C to 0x240 (4 bytes), confirming that the two syscalls are 
+consecutive.
+
+--------- 2.5.5 ---------
+The __weak modifier defines a default exception handler that can be overridden 
+by a strong definition with the same name during linking. This allows users to 
+customize exception handling without modifying the support code.
+
+--------- 2.5.6 ---------
+Yes, the code should still work because our handler is a strong symbol, while 
+the default handler is declared as weak. During linking, the strong definition 
+takes precedence over the weak one, allowing us to override the default handler 
+without modifying the exception vector.
